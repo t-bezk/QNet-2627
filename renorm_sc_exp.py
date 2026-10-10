@@ -10,11 +10,11 @@ H_OUT2 = []
 P_STR = 0.5 * (np.sqrt(5) - 1)
 DP = True   ## display
 
-M0 = 1  ## starting generation index
-M1 = 13 ## max generation index
-M2 = 45 ## generation of approx threshold (should be large)
-P_LO = 0.4
-P_HI = 0.8
+M0 = 1      ## starting generation index
+M1 = 13     ## max generation index
+M2 = 45     ## generation of approx threshold (should be large)
+P_LO = 0.4  ## lower bound
+P_HI = 0.8  ## upper bound
 
 
 theta = np.linspace(0, np.pi/4, 1000)
