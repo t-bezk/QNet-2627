@@ -8,7 +8,9 @@ from perc_models import P_SC, C_SC
 H_OUT = []
 H_OUT2 = []
 P_STR = 0.5 * (np.sqrt(5) - 1)
-DP = True   ## display
+DP = False   ## Sponge Crossing Graph
+
+
 
 M0 = 1      ## starting generation index
 M1 = 13     ## max generation index
@@ -32,8 +34,8 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
     prm_n = []
     tht_q = []
 
-    plt.close()
-
+    if display:
+        plt.close()
     for _n in range(M0,M2):
         ## determine threshold probability for given generation
         x_th_l = op.brentq(lambda x: x_sc(x, _n) - prm_th, 1e-8, 1 - 1e-8)
@@ -47,8 +49,9 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
         if display:
             plt.plot(theta, x_sc(theta, _n))
 
-    plt.savefig(f'{t}_inf_atn.png',dpi=400)
-    plt.close()
+    if display:
+        plt.savefig(f'{t}_inf_atn.png',dpi=400)
+        plt.close()
 
     ## log of difference as prm_n approaches threshold
     diff_tm = np.asarray(x_th_l) if x_str is None else np.asarray(x_str)

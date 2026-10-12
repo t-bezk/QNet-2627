@@ -12,7 +12,7 @@ def recover_branch_layers(G):
     n = len(adj_mat)
 
     for i in range(n):
-        for j in range(i + 1, n):  # only the entries above the diagonal
+        for j in range(i + 1, n):  ## only the entries above the diagonal
             if adj_mat[i][j] == 1:
                 arr.append([i + 1, j + 1])
 
