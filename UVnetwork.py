@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
-N=4
 
 def recover_branch_layers(G):
     arr = []
@@ -27,28 +26,54 @@ def branch_out(G,u,v):
     G.add_nodes_from([x,y])
     G.add_edges_from([(u,x),(u,y),(x,v),(y,v)])
 
+def gen_uv_flower(n0_gens):
+    G = nx.Graph(n0_gens)
 
-G = nx.Graph()
-
-## Initialise N=0 case
-G.add_nodes_from([1,2])
-G.add_edges_from([(1,2)])
-
-
-for _ in range(N):
-    uq_edge = recover_branch_layers(G)
-    for r in uq_edge:
-        branch_out(G, r[0],r[1])
+    ## Initialise N=0 case
+    G.add_nodes_from([1,2])
+    G.add_edges_from([(1,2)])
 
 
-## Display
-A = nx.adjacency_matrix(G).toarray()
+    for _ in range(n0_gens):
+        uq_edge = recover_branch_layers(G)
+        for r in uq_edge:
+            branch_out(G, r[0],r[1])
 
-pos = {
-    1: (-2, 0),
-    2: (2, 0),
-}
 
-pos = nx.spring_layout(G, pos=pos, fixed=[1,2], seed=42)
-nx.draw_kamada_kawai(G, with_labels=True, font_weight='bold')
-plt.show()
+    ## Display
+    return G
+
+
+
+def gen_uv_flower_format(n0_gens):
+    G = nx.Graph()
+    a = []
+
+    ## Initialise N=0 case
+    G.add_nodes_from([1,2])
+    G.add_edges_from([(1,2)])
+
+
+    for _ in range(n0_gens):
+        uq_edge = recover_branch_layers(G)
+        for r in uq_edge:
+            branch_out(G, r[0],r[1])
+
+
+    ## Display
+    for i in list(G):
+        for l in G.edges(i):
+            a.append([l[0],l[1]])
+    return a
+
+
+
+#pos = {
+#    1: (-2, 0),
+#    2: (2, 0),
+#}
+#
+#pos = nx.spring_layout(G, pos=pos, fixed=[1,2], seed=42)
+#nx.draw_kamada_kawai(G, with_labels=True, font_weight='bold')
+#plt.show()
+#
