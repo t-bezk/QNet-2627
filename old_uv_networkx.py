@@ -27,21 +27,21 @@ def branch_out(G,u,v):
     G.add_edges_from([(u,x),(u,y),(x,v),(y,v)])
 
 def gen_uv_flower(n0_gens):
-    G = nx.Graph(n0_gens)
+    graph_obj = nx.Graph(n0_gens)
 
     ## Initialise N=0 case
-    G.add_nodes_from([1,2])
-    G.add_edges_from([(1,2)])
+    graph_obj.add_nodes_from([1,2])
+    graph_obj.add_edges_from([(1,2)])
 
 
     for _ in range(n0_gens):
-        uq_edge = recover_branch_layers(G)
+        uq_edge = recover_branch_layers(graph_obj)
         for r in uq_edge:
-            branch_out(G, r[0],r[1])
+            branch_out(graph_obj, r[0],r[1])
 
 
     ## Display
-    return G
+    return graph_obj
 
 
 
@@ -65,15 +65,3 @@ def gen_uv_flower_format(n0_gens):
         for l in G.edges(i):
             a.append([l[0],l[1]])
     return a
-
-
-
-#pos = {
-#    1: (-2, 0),
-#    2: (2, 0),
-#}
-#
-#pos = nx.spring_layout(G, pos=pos, fixed=[1,2], seed=42)
-#nx.draw_kamada_kawai(G, with_labels=True, font_weight='bold')
-#plt.show()
-#
