@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as op
 from perc_models import P_SC, C_SC
+from scipy.interpolate import PchipInterpolator
 
 H_OUT = []
 H_OUT2 = []
@@ -12,14 +13,43 @@ DP = False   ## Sponge Crossing Graph
 
 
 
-M0 = 1      ## starting generation index
-M1 = 13     ## max generation index
-M2 = 45     ## generation of approx threshold (should be large)
+M0 = 2      ## starting generation index
+M1 = 6      ## max generation index
+M2 = 7      ## generation of approx threshold (should be large)
 P_LO = 0.4  ## lower bound
 P_HI = 0.8  ## upper bound
 
+def fast_root(f, target, lo, hi, m=12):
+    xs = np.linspace(lo, hi, m)
+    ys = np.array([f(x) for x in xs])
+
+    if ys[0] > ys[-1]:                       # decreasing -> flip
+        xs, ys = xs[::-1], ys[::-1]
+
+    keep = [0]                               # drop flat / saturated points
+    for i in range(1, len(ys)):
+        if ys[i] > ys[keep[-1]] + 1e-9:
+            keep.append(i)
+    xs, ys = xs[keep], ys[keep]
+
+    if len(ys) < 3 or not (ys[0] <= target <= ys[-1]):
+        raise ValueError("target not bracketed; narrow or shift [lo, hi]")
+    return float(PchipInterpolator(ys, xs)(target))
+
 
 theta = np.linspace(0, np.pi/4, 1000)
+
+
+def plot_parameter(x_sc, no_pts, n0_gens):
+
+    lsp = np.linspace(0,np.pi/4, no_pts)
+    y = []
+    for i in lsp:
+        y.append(x_sc(i, n0_gens))
+    
+    plt.scatter(lsp, np.array(y))
+
+
 
 def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
     """
@@ -38,7 +68,7 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
         plt.close()
     for _n in range(M0,M2):
         ## determine threshold probability for given generation
-        x_th_l = op.brentq(lambda x: x_sc(x, _n) - prm_th, 1e-8, 1 - 1e-8)
+        x_th_l = op.brentq(lambda x: x_sc(x, _n) - prm_th, 1e-3, 1 - 1e-3)
 
         if _n >= M1-1 and _n < M2:
             continue
@@ -62,15 +92,18 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
     plt.plot(np.log10(tht_q), grad_fit[0]*np.log10(tht_q) + grad_fit[1])
 
     ## nu recovered from inverse gradient
-    return -1/grad_fit[0]
+    #return -1/grad_fit[0]
+
+    ## beta recovered from gradient
+    return grad_fit[0]
 
 
-p_nu_min = parameter_scaling(P_LO, P_SC, P_STR, DP,t='P')
-p_nu_max = parameter_scaling(P_HI, P_SC, P_STR, DP,t='P')
-plt.show()
-print(f'v = {0.5*(p_nu_min + p_nu_max)} ± {abs(0.5*(p_nu_min - p_nu_max))}')
-
-c_nu_min = parameter_scaling(P_LO, C_SC, None, DP,t='C')
-c_nu_max = parameter_scaling(P_HI, C_SC, None, DP,t='C')
-plt.show()
-print(f'v = {0.5*(c_nu_min + c_nu_max)} ± {abs(0.5*(c_nu_min - c_nu_max))}')
+#p_nu_min = parameter_scaling(P_LO, P_SC, P_STR, DP,t='P')
+#p_nu_max = parameter_scaling(P_HI, P_SC, P_STR, DP,t='P')
+#plt.show()
+#print(f'v = {0.5*(p_nu_min + p_nu_max)} ± {abs(0.5*(p_nu_min - p_nu_max))}')
+#
+#c_nu_min = parameter_scaling(P_LO, C_SC, None, DP,t='C')
+#c_nu_max = parameter_scaling(P_HI, C_SC, None, DP,t='C')
+#plt.show()
+#print(f'v = {0.5*(c_nu_min + c_nu_max)} ± {abs(0.5*(c_nu_min - c_nu_max))}')

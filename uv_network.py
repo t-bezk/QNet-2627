@@ -1,8 +1,12 @@
 """ Generates an Nth generation (2,2) flower """
 
 import numpy as np
+import timeit
 
 def gen_uv_flower(n0_gens):
+
+    time_st = timeit.default_timer()
+
     uv_arr = [(0,1)]
     cnt = 2
 
@@ -15,6 +19,11 @@ def gen_uv_flower(n0_gens):
             uv_arr.pop(i)
             uv_arr += [(a, cnt),(cnt, b),(a,cnt+1),(cnt+1, b)]
             cnt+=2
+
+    time_en = timeit.default_timer()
+
+    print(f'N={n0_gens} completed in {round((time_en - time_st), 3)}s')
+
     return uv_arr
 
 

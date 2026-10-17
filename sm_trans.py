@@ -2,6 +2,7 @@ import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 from scipy.optimize import root
+import timeit
 
 
 def seri(t1,t2):
@@ -48,6 +49,9 @@ def star_to_mesh(legs):
 
 
 def reduce_to_AB(G, A, B):
+
+    time_st = timeit.default_timer()
+
     H = {n: dict(nbrs) for n, nbrs in G.items()}
     while True:
         others = [n for n in H if n not in (A, B)]
@@ -65,6 +69,11 @@ def reduce_to_AB(G, A, B):
         for a in nbrs:
             del H[a][k]
         del H[k]
+
+    time_en = timeit.default_timer()
+
+    print(f'SM completed in {round((time_en - time_st), 3)}s')
+
     return H.get(A, {}).get(B, 0.0)
  
  
