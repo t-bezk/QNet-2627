@@ -14,8 +14,8 @@ DP = False   ## Sponge Crossing Graph
 
 
 M0 = 2      ## starting generation index
-M1 = 6      ## max generation index
-M2 = 7      ## generation of approx threshold (should be large)
+M1 = 3      ## max generation index
+M2 = 14      ## generation of approx threshold (should be large)
 P_LO = 0.4  ## lower bound
 P_HI = 0.8  ## upper bound
 
@@ -98,12 +98,12 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
     return grad_fit[0]
 
 
-#p_nu_min = parameter_scaling(P_LO, P_SC, P_STR, DP,t='P')
-#p_nu_max = parameter_scaling(P_HI, P_SC, P_STR, DP,t='P')
-#plt.show()
-#print(f'v = {0.5*(p_nu_min + p_nu_max)} ± {abs(0.5*(p_nu_min - p_nu_max))}')
-#
-#c_nu_min = parameter_scaling(P_LO, C_SC, None, DP,t='C')
-#c_nu_max = parameter_scaling(P_HI, C_SC, None, DP,t='C')
-#plt.show()
-#print(f'v = {0.5*(c_nu_min + c_nu_max)} ± {abs(0.5*(c_nu_min - c_nu_max))}')
+p_nu_min = parameter_scaling(P_LO, P_SC, P_STR, DP,t='P')
+p_nu_max = parameter_scaling(P_HI, P_SC, P_STR, DP,t='P')
+plt.show()
+print(f'v = {0.5*(p_nu_min + p_nu_max)} ± {abs(0.5*(p_nu_min - p_nu_max))}')
+
+c_nu_min = parameter_scaling(P_LO, C_SC, None, DP,t='C')
+c_nu_max = parameter_scaling(P_HI, C_SC, None, DP,t='C')
+plt.show()
+print(f'v = {0.5*(c_nu_min + c_nu_max)} ± {abs(0.5*(c_nu_min - c_nu_max))}')
