@@ -1,7 +1,7 @@
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
-from scipy.optimize import root
+from scipy.optimize import root, brentq
 import timeit
 
 
@@ -111,3 +111,48 @@ def build(edge_list):
         graph_obj.setdefault(u, {})[v] = w
         graph_obj.setdefault(v, {})[u] = w
     return graph_obj
+
+
+def _star_to_triangle(legs):
+
+    i, j, k = sorted(legs)
+    a_ij, a_ik, a_jk = (1 - legs[i] * legs[j], 1 - legs[i] * legs[k], 1 - legs[j] * legs[k])
+    c1, c2, c3 = a_ij + a_ik - a_jk, a_ij + a_jk - a_ik, a_ik + a_jk - a_ij
+ 
+    def g(x):
+        return (x + c1) * (x + c2) * (x + c3) - 8 * x * x   # g(0) >= 0 >= g(1)
+ 
+    if g(0.0) <= 0:                      # guard against rounding at the endpoints
+        S = 0.0
+    elif g(1.0) >= 0:
+        S = 1.0
+    else:
+        S = brentq(g, 0.0, 1.0, xtol=1e-15)
+    u, v, w = (c1 + S) / 2, (c2 + S) / 2, (c3 + S) / 2
+ 
+    def q(x, y, z):
+        return np.sqrt(x * y / z) if z > 0 else 0.0
+ 
+    return {(i, j): 1 - q(u, v, w), (i, k): 1 - q(u, w, v), (j, k): 1 - q(v, w, u)}
+ 
+ 
+def star_to_mesh_k3(legs):
+    leaves = sorted(legs)
+    if len(leaves) == 2:
+        a, b = leaves
+        return {(a, b): seri(legs[a], legs[b])}
+    if len(leaves) == 3:                         # closed form: no solver needed
+        return _star_to_triangle(legs)
+    pairs = list(itertools.combinations(leaves, 2))
+ 
+    def residuals(x):
+        W = dict(zip(pairs, x))
+        return [cross(i, j, W, leaves) - seri(legs[i], legs[j]) for i, j in pairs]
+ 
+    x0 = [0.5 * seri(legs[i], legs[j]) for i, j in pairs]
+    sol = root(residuals, x0, method="hybr", tol=1e-13)
+    # Judge convergence by the residual, not sol.success: with a tight tol the flag
+    # can be False even when the equations are already solved to ~1e-16.
+    if not sol.success and max(abs(r) for r in residuals(sol.x)) > 1e-10:
+        raise RuntimeError(sol.message)
+    return dict(zip(pairs, sol.x))
