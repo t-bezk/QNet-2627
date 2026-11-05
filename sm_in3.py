@@ -2,7 +2,6 @@ import numpy as np
 
 from scipy.optimize import brentq
 
-from sympy import *
 
 
 
@@ -21,11 +20,21 @@ def p_0(a,b,c):
 def f_cbic(f,a,b,c):
     return p_3(a,b,c)*f**3 + p_2(a,b,c)*f**2 + p_1(a,b,c)*f + p_0(a,b,c)
 
-def d_evte(a,b,c,f):
+def d_evte(a,b,c,f):## Implement divide by zero check
     return (a*c + (a*b-b*c)*f-f**2)/(1-f**2)
 
-def e_evte(a,b,c,f):
+def e_evte(a,b,c,f):## Implement divide by zero check
     return (b*c + (a*b-a*c)*f-f**2)/(1-f**2)
+
+def a_evte_inv(d,e,f): ## Implement divide by zero check
+    return ((d*e+f-d*e*f)*(e*f+d-d*e*f)/(d*f+e-d*e*f))**0.5
+
+def b_evte_inv(d,e,f):## Implement divide by zero check
+    return ((d*e+f-d*e*f)*(d*f+e-d*e*f)/(e*f+d-d*e*f))**0.5
+
+def c_evte_inv(d,e,f):## Implement divide by zero check
+    return ((e*f+d-d*e*f)*(d*f+e-d*e*f)/(d*e+f-d*e*f))**0.5
+
 
 def star_3_fwd(a,b,c):
     """ Returns a fast numerical approximation for the forward star-mesh transformation"""
@@ -36,7 +45,11 @@ def star_3_fwd(a,b,c):
 
     return d_0, e_0, f_0
 
+def star_3_inv(d,e,f):
+    """ Returns exact inverse star-mesh for a 3-edge system """
 
-d, e, f = star_3_fwd(0.6,0.2,0.8)
+    a_0 = a_evte_inv(d,e,f)
+    b_0 = b_evte_inv(d,e,f)
+    c_0 = c_evte_inv(d,e,f)
 
-print(f'{d} {e} {f}')
+    return a_0, b_0, c_0
