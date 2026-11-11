@@ -27,26 +27,56 @@ def pinf_gen(p, n0_gens):
 
 RNG = 5001
 
-pr=np.linspace(0,0.84,RNG)
+pr=np.linspace(0,1,RNG)
 
 P_INF_N = []
 
+ati = []
+
+bti = []
+
+n_sub = [ 0, 1, 0 ]
+
+
+
+
+
+
+
 for p in pr:
-    AX = para(seri(p,p),seri(p,p))
-    XT = p
-    BT = p
-    BX = seri(p,p)
-    AB = para(para(seri(p,p),seri(p,p)),para(seri(p,p),seri(p,p)))
 
-    D, E, F = star_3_fwd(BX, XT, AX)
+    ## two order 1 points
+    T1A = para(p*p,p*p)
+    T1B = para(p*p,p*p)
+    P_SC = seri(para(p*p,p*p),para(p*p,p*p))
+    AM, T1M, BM = star_3_inv(P_SC, T1A, T1B)
+    P_INF_N1 = 0.5*(AM*T1M + BM*T1M)
 
-    BT_2 = para(F,BT)
-    AB_2 = para(D,AB)
+    ## four order 2 points, rightwards chirality
+    T1X = p
+    T1B = p
+    XB = p*p
+    XA = para(p*p,p*p)
+    AB_2, T1A_2, T1B_2 = star_3_fwd(XA, T1X, XB)
+    AB_3 = para(P_SC, AB_2)
+    T1B_3 = para(T1B_2, p)
+    AM, T1M, BM = star_3_inv(AB_3, T1A_2, T1B_3)
+    P_INR_N2 = 0.5*(AM*T1M + BM*T1M)
 
-    AT, BT, AB_3 = star_3_inv(E, BT_2, AB_2)
+    ## four order 2 points, leftwards chirality
+    T1X = p
+    T1B = para(p*p,p*p)
+    T1A = p*p
+    XA = p
+    AB_2, T1A_2, T1B_2 = star_3_fwd(T1A, T1X, T1B)
+    AB_3 = para(P_SC, AB_2)
+    T1B_3 = para(T1A_2, p)
+    AM, T1M, BM = star_3_inv(AB_3, T1A_2, T1B_3)
+    P_INL_N2 = 0.5*(AM*T1M + BM*T1M)
 
-    P_INF_N.append(0.5 * (AT + BT))
+    ati.append((4*P_INL_N2)/4)
 
-plt.scatter(pr,P_INF_N)
-plt.scatter(pr,para(para(seri(pr,pr),seri(pr,pr)),para(seri(pr,pr),seri(pr,pr))))
+
+plt.plot(pr,ati)
+#plt.scatter(pr,para(para(seri(pr,pr),seri(pr,pr)),para(seri(pr,pr),seri(pr,pr))))
 plt.show()

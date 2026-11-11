@@ -39,7 +39,9 @@ def c_evte_inv(d,e,f):## Implement divide by zero check
 def star_3_fwd(a,b,c):
     """ Returns a fast numerical approximation for the forward star-mesh transformation"""
 
-    f_0 = brentq(lambda x: f_cbic(x,a,b,c), 0, 1, xtol=1e-13)
+    cbc = lambda x: f_cbic(x,a,b,c)
+    f_0 = 0.0 if cbc(0) <= 0 else 1.0 if cbc(1) >= 0 else brentq(cbc, 0, 1, xtol=1e-13)
+    #f_0 = brentq(lambda x: f_cbic(x,a,b,c), 0, 1, xtol=1e-13)
     d_0 = d_evte(a,b,c,f_0)
     e_0 = e_evte(a,b,c,f_0)
 
