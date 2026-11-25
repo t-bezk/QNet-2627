@@ -3,6 +3,14 @@
 import numpy as np
 
 
+def seri(t1,t2):
+    return t1*t2
+
+
+def para(t1,t2):
+    return 1 - (1-t1)*(1-t2)
+
+
 def R_P(p):
     return 1 - (1 - p**2)**2
 

@@ -1,9 +1,6 @@
-import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
 import perc_models as pm
-from sm_in3 import *
-from sm_trans import para
+import sm_in3 as sm
 
 def route_matrix(n, i):
 
@@ -15,11 +12,9 @@ def route_matrix(n, i):
     N = n + 2
     A = np.zeros((N, N), dtype=int)
 
-    # path part: A[k-1, k] = 1 (1-indexed), plus mirror
     for k in range(2, N + 1):
         A[k - 2, k - 1] = A[k - 1, k - 2] = 1
 
-    # second 1 of each column in k
     p = 1
     A[p - 1, 2] = A[2, p - 1] = 1
     for t in range(1, n):
@@ -58,7 +53,7 @@ def locate_new_edges(n, i):
     return np.concatenate([sd_vl, np.delete(sm_pts, np.where(sm_pts == sd_vl))])
 
 def get_weighted_route(n, i, p):
-    """Weighted adjacency matrix of an n-node graph, route 1 <= i <= 2**(n-3).
+    """Weighted adjacency matrix of an n-node graph, route 1 <= i <= 2**(n-3)
 
     p = [p0, p1, ..., p_{n-2}]  (n-1 weights); needs n >= 4.
     Relies on route_matrix(n_old, idx) from before, with n_old = n-2, idx = i-1.
@@ -69,23 +64,23 @@ def get_weighted_route(n, i, p):
     if not 1 <= i <= 2 ** (n - 3):
         raise IndexError(f"i must satisfy 1 <= i <= {2 ** (n - 3)}")
 
-    A = np.triu(route_matrix(n - 2, i - 1), 1)   # 0/1 upper triangle
+    A = np.triu(route_matrix(n - 2, i - 1), 1)
     W = np.zeros((n, n))
 
-    prev = np.flatnonzero(A[:, n - 1])            # last column: both edges -> p0
+    prev = np.flatnonzero(A[:, n - 1])
     W[prev, n - 1] = p[0]
 
-    for c in range(n - 2, 0, -1):                 # 0-indexed columns n-2 ... 1
-        k = n - 1 - c                             # = n - j for 1-indexed j = c+1
+    for c in range(n - 2, 0, -1):
+        k = n - 1 - c
         rows = np.flatnonzero(A[:, c])
-        if c == 1:                                # first column: single edge, unsquared
-            W[rows, c] = p[k]
+        if c == 1:
+            W[rows, c] = p[k - 1] ** 2
         else:
-            shared = np.intersect1d(rows, prev)   # row also used by the column to the right
+            shared = np.intersect1d(rows, prev)
             other = np.setdiff1d(rows, prev)
-            W[shared, c] = p[k] ** 2
+            W[shared, c] = p[k - 1] ** 2
             W[other, c] = p[k]
-        prev = rows                               # unweighted pattern drives the next step
+        prev = rows
 
     return W + W.T
 
@@ -93,10 +88,8 @@ def get_sc_array(p, n):
     return [ pm.P_SC(p, _n) for _n in range(n+1) ]
 
 def eliminate_penultimate(W, E):
-    """Remove node m-2 of an m-node graph.
+    """Remove node m-2 of an m-node graph"""
 
-    W: weights.  E: boolean mask, True = edge exists (even if its weight is 0).
-    """
     m = W.shape[0]
     x, L = m - 2, m - 1
 
@@ -104,81 +97,50 @@ def eliminate_penultimate(W, E):
     if len(nbrs) != 2 or not E[x, L]:
         raise ValueError(f"node {x} of {m}: neighbours {np.flatnonzero(E[x]).tolist()}")
 
-    nbrs.sort(key=lambda v: not E[v, L])      # neighbour already joined to L first
+    nbrs.sort(key=lambda v: not E[v, L])    ## neighbour already joined to L first
     s, o = nbrs
 
-    d, e, f = star_3_fwd(W[x, s], W[x, L], W[x, o])   # a = s, b = L, c = o
+    d, e, f = sm.star_3_fwd(W[x, s], W[x, L], W[x, o])     ## a=s, b=L, c=o
 
     R, F = W.copy(), E.copy()
     for (u, v), w in (((s, L), f), ((s, o), d), ((o, L), e)):
-        R[u, v] = R[v, u] = para(W[u, v], w) if E[u, v] else w
+        R[u, v] = R[v, u] = pm.para(W[u, v], w) if E[u, v] else w
         F[u, v] = F[v, u] = True
 
     keep = [j for j in range(m) if j != x]
     return R[np.ix_(keep, keep)], F[np.ix_(keep, keep)]
 
 def repeat_star_to_3(n, i, p):
-    E = route_matrix(n - 2, i - 1).astype(bool)   # edge pattern from the Kronecker structure
+    """"""
+
+    E = route_matrix(n - 2, i - 1).astype(bool)   ## edge pattern from the Kronecker structure
     W = get_weighted_route(n, i, p)
     while W.shape[0] > 3:
         W, E = eliminate_penultimate(W, E)
     return W
 
 
-def get_node_param(n, p):
+def get_node_param(g, p):
+    """Order parameter and sponge crossing of the g-th generation (2,2) flower at link prob p"""
+    if g < 1:
+        raise ValueError("g must be >= 1")
+    n = g + 2                                     # number of nodes in the reduced network
+    i_max = 2 ** (g - 1)
+    p_inf_i = 0.
+    p_sc_i = 0.
 
-    P_inf_i = 0.
-    P_sc_i = 0.
-    i_max = 2**(n-3)
-
-    for i in range(1,i_max):
-        TRI = repeat_star_to_3(n,i,get_sc_array(p,n))
+    for i in range(1, i_max + 1):
+        if g == 1:
+            TRI = np.array([[0, p**2, p], [p**2, 0, p], [p, p, 0]])
+        else:
+            TRI = repeat_star_to_3(n, i, get_sc_array(p, g))
 
         D_AB, F_TA, E_TB = TRI[0][1], TRI[0][2], TRI[1][2]
 
-        TM, AM, BM = star_3_inv(D_AB, E_TB, F_TA)
+        AM, TM, BM = sm.star_3_inv(D_AB, E_TB, F_TA)
 
-        P_inf_i += 0.5 * (TM * AM + TM * BM) / i_max
-        P_sc_i += AM * BM / i_max
+        p_inf_i += 0.5 * (TM * AM + TM * BM) / i_max
+        p_sc_i += AM * BM / i_max
 
-    return P_inf_i, P_sc_i
+    return p_inf_i, p_sc_i
 
-P_VALS = np.linspace(0.01,0.99,50)
-P_SC_V = []
-P_INF = []
-NO = 3 ## Number of generations!!!!!
-
-P_STR = 0.5 * (np.sqrt(5) - 1) ## 0.618034...
-
-DP = P_VALS[2]-P_VALS[1]
-
-P_SC_RF = pm.P_SC(P_VALS,NO)
-
-for p in P_VALS:
-    c = get_node_param(NO,p)
-    P_INF.append(c[0])
-    P_SC_V.append(c[1])
-
-plt.plot(P_VALS,np.log10(P_INF), label='log O Pm.')
-w = P_VALS < P_STR + 0.9*DP
-q = P_VALS > P_STR - 0.9*DP
-i_th = np.where(np.array(w*q)==1)[0][0]
-print(np.log10(P_INF[i_th])/np.log10(np.abs(P_VALS[i_th] - P_STR)))
-plt.legend()
-plt.grid()
-plt.savefig('order_log.png')
-plt.close()
-
-
-plt.plot(P_VALS,P_INF, label=f'Order Pm. n={NO}')
-#plt.plot(P_VALS,P_SC_V, label='Sponge Cr.')
-#plt.plot(P_VALS,P_SC_RF, label='Real S Cr.')
-#plt.plot(P_VALS,P_SC_RF - P_SC_V, label='Er F.')
-
-plt.legend()
-
-plt.grid()
-
-plt.savefig('opsc.png')
-
-plt.show()

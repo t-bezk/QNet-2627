@@ -1,9 +1,5 @@
 import numpy as np
-
 from scipy.optimize import brentq
-
-
-
 
 def p_3(a,b,c):
     return a*b - a*c - b*c + 1
@@ -12,7 +8,7 @@ def p_2(a,b,c):
     return -a*a*b*b + a*a*b*c + a*b*b*c - a*b*c*c - a*b + a*c + b*c - 1
 
 def p_1(a,b,c):
-    return a*b*c*c + b*b*c*c - a*a*b*c - a*b*b*c + a*b - 1
+    return a*a*c*c + b*b*c*c - a*a*b*c - a*b*b*c + a*b - 1
 
 def p_0(a,b,c):
     return a*b * (1-c*c)
@@ -40,8 +36,9 @@ def star_3_fwd(a,b,c):
     """ Returns a fast numerical approximation for the forward star-mesh transformation"""
 
     cbc = lambda x: f_cbic(x,a,b,c)
-    f_0 = 0.0 if cbc(0) <= 0 else 1.0 if cbc(1) >= 0 else brentq(cbc, 0, 1, xtol=1e-13)
-    #f_0 = brentq(lambda x: f_cbic(x,a,b,c), 0, 1, xtol=1e-13)
+    f_0 = 0.0 if cbc(0) <= 0 else 1.0 if cbc(1) >= 0 else brentq(cbc, 0, 1, xtol=1e-14)
+    if 1 - f_0 * f_0 < 1e-9:
+        f_0 = min(f_0, 1 - 1e-9)
     d_0 = d_evte(a,b,c,f_0)
     e_0 = e_evte(a,b,c,f_0)
 

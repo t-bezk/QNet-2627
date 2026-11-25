@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import scipy.optimize as op
 from perc_models import P_SC, C_SC
 from scipy.interpolate import PchipInterpolator
-from new_order_parameter import get_node_param
+from order_parameter import get_node_param
 
 H_OUT = []
 H_OUT2 = []
