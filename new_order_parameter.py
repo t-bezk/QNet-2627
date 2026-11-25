@@ -1,6 +1,9 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import perc_models as pm
+from sm_in3 import *
+from sm_trans import para
 
 def route_matrix(n, i):
 
@@ -16,7 +19,7 @@ def route_matrix(n, i):
     for k in range(2, N + 1):
         A[k - 2, k - 1] = A[k - 1, k - 2] = 1
 
-    # second 1 of each column k = 3..N
+    # second 1 of each column in k
     p = 1
     A[p - 1, 2] = A[2, p - 1] = 1
     for t in range(1, n):
@@ -33,13 +36,13 @@ def all_matrices(n):
 def get_reduced_network(n, i):
     return route_matrix(n-1, int(np.floor(i*0.5)))
 
-def locate_new_edge(n, i):
+def locate_new_edges(n, i):
 
-    ad = np.array(route_matrix(n,i))
-    ad_2 = np.array(get_reduced_network(n,i))
+    ad = np.array(route_matrix(n-1,i+1))
+    ad_2 = np.array(get_reduced_network(n-1,i+1))
 
     ## all points considered in fwd star mesh are in this row
-    sm_pts = np.where(np.array(ad[-2] == 1))
+    sm_pts = np.ravel(np.where(np.array(ad[-2] == 1)))
 
     ad = np.delete(ad, -2, 0)
     ad = np.delete(ad, -2, 1)
@@ -48,12 +51,134 @@ def locate_new_edge(n, i):
                 else 0 for j in range(len(ad[0]))] for i in range(len(ad))]
 
     ## common edge with no extra parallel connectivity
-    m_pt = np.argwhere(np.array(ad_mask) == 1)
+    m_pt = np.argwhere(np.array(ad_mask) == 1)[0]
 
-    return m_pt
+    sd_vl = np.ravel(np.intersect1d(m_pt, sm_pts))
 
-n, i = 3, 1
+    return np.concatenate([sd_vl, np.delete(sm_pts, np.where(sm_pts == sd_vl))])
 
-locate_new_edge(n,i)
+def get_weighted_route(n, i, p):
+    """Weighted adjacency matrix of an n-node graph, route 1 <= i <= 2**(n-3).
+
+    p = [p0, p1, ..., p_{n-2}]  (n-1 weights); needs n >= 4.
+    Relies on route_matrix(n_old, idx) from before, with n_old = n-2, idx = i-1.
+    """
+    p = np.asarray(p, dtype=float)
+    if len(p) < n - 1:
+        raise ValueError(f"need at least n-1 = {n-1} weights in p")
+    if not 1 <= i <= 2 ** (n - 3):
+        raise IndexError(f"i must satisfy 1 <= i <= {2 ** (n - 3)}")
+
+    A = np.triu(route_matrix(n - 2, i - 1), 1)   # 0/1 upper triangle
+    W = np.zeros((n, n))
+
+    prev = np.flatnonzero(A[:, n - 1])            # last column: both edges -> p0
+    W[prev, n - 1] = p[0]
+
+    for c in range(n - 2, 0, -1):                 # 0-indexed columns n-2 ... 1
+        k = n - 1 - c                             # = n - j for 1-indexed j = c+1
+        rows = np.flatnonzero(A[:, c])
+        if c == 1:                                # first column: single edge, unsquared
+            W[rows, c] = p[k]
+        else:
+            shared = np.intersect1d(rows, prev)   # row also used by the column to the right
+            other = np.setdiff1d(rows, prev)
+            W[shared, c] = p[k] ** 2
+            W[other, c] = p[k]
+        prev = rows                               # unweighted pattern drives the next step
+
+    return W + W.T
+
+def get_sc_array(p, n):
+    return [ pm.P_SC(p, _n) for _n in range(n+1) ]
+
+def eliminate_penultimate(W, E):
+    """Remove node m-2 of an m-node graph.
+
+    W: weights.  E: boolean mask, True = edge exists (even if its weight is 0).
+    """
+    m = W.shape[0]
+    x, L = m - 2, m - 1
+
+    nbrs = [v for v in np.flatnonzero(E[x]) if v != L]
+    if len(nbrs) != 2 or not E[x, L]:
+        raise ValueError(f"node {x} of {m}: neighbours {np.flatnonzero(E[x]).tolist()}")
+
+    nbrs.sort(key=lambda v: not E[v, L])      # neighbour already joined to L first
+    s, o = nbrs
+
+    d, e, f = star_3_fwd(W[x, s], W[x, L], W[x, o])   # a = s, b = L, c = o
+
+    R, F = W.copy(), E.copy()
+    for (u, v), w in (((s, L), f), ((s, o), d), ((o, L), e)):
+        R[u, v] = R[v, u] = para(W[u, v], w) if E[u, v] else w
+        F[u, v] = F[v, u] = True
+
+    keep = [j for j in range(m) if j != x]
+    return R[np.ix_(keep, keep)], F[np.ix_(keep, keep)]
+
+def repeat_star_to_3(n, i, p):
+    E = route_matrix(n - 2, i - 1).astype(bool)   # edge pattern from the Kronecker structure
+    W = get_weighted_route(n, i, p)
+    while W.shape[0] > 3:
+        W, E = eliminate_penultimate(W, E)
+    return W
+
+
+def get_node_param(n, p):
+
+    P_inf_i = 0.
+    P_sc_i = 0.
+    i_max = 2**(n-3)
+
+    for i in range(1,i_max):
+        TRI = repeat_star_to_3(n,i,get_sc_array(p,n))
+
+        D_AB, F_TA, E_TB = TRI[0][1], TRI[0][2], TRI[1][2]
+
+        TM, AM, BM = star_3_inv(D_AB, E_TB, F_TA)
+
+        P_inf_i += 0.5 * (TM * AM + TM * BM) / i_max
+        P_sc_i += AM * BM / i_max
+
+    return P_inf_i, P_sc_i
+
+P_VALS = np.linspace(0.01,0.99,50)
+P_SC_V = []
+P_INF = []
+NO = 3 ## Number of generations!!!!!
+
+P_STR = 0.5 * (np.sqrt(5) - 1) ## 0.618034...
+
+DP = P_VALS[2]-P_VALS[1]
+
+P_SC_RF = pm.P_SC(P_VALS,NO)
+
+for p in P_VALS:
+    c = get_node_param(NO,p)
+    P_INF.append(c[0])
+    P_SC_V.append(c[1])
+
+plt.plot(P_VALS,np.log10(P_INF), label='log O Pm.')
+w = P_VALS < P_STR + 0.9*DP
+q = P_VALS > P_STR - 0.9*DP
+i_th = np.where(np.array(w*q)==1)[0][0]
+print(np.log10(P_INF[i_th])/np.log10(np.abs(P_VALS[i_th] - P_STR)))
+plt.legend()
+plt.grid()
+plt.savefig('order_log.png')
+plt.close()
+
+
+plt.plot(P_VALS,P_INF, label=f'Order Pm. n={NO}')
+#plt.plot(P_VALS,P_SC_V, label='Sponge Cr.')
+#plt.plot(P_VALS,P_SC_RF, label='Real S Cr.')
+#plt.plot(P_VALS,P_SC_RF - P_SC_V, label='Er F.')
+
+plt.legend()
+
+plt.grid()
+
+plt.savefig('opsc.png')
 
 plt.show()

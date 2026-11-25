@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import scipy.optimize as op
 from perc_models import P_SC, C_SC
 from scipy.interpolate import PchipInterpolator
+from new_order_parameter import get_node_param
 
 H_OUT = []
 H_OUT2 = []
@@ -15,7 +16,7 @@ DP = False   ## Sponge Crossing Graph
 
 M0 = 2      ## starting generation index
 M1 = 3      ## max generation index
-M2 = 14      ## generation of approx threshold (should be large)
+M2 = 9      ## generation of approx threshold (should be large)
 P_LO = 0.4  ## lower bound
 P_HI = 0.8  ## upper bound
 
@@ -101,9 +102,42 @@ def parameter_scaling(prm_th, x_sc, x_str, display,t=''):
 p_nu_min = parameter_scaling(P_LO, P_SC, P_STR, DP,t='P')
 p_nu_max = parameter_scaling(P_HI, P_SC, P_STR, DP,t='P')
 plt.show()
+
+P_TH_S = 0.5*(p_nu_min + p_nu_max)
 print(f'v = {0.5*(p_nu_min + p_nu_max)} ± {abs(0.5*(p_nu_min - p_nu_max))}')
 
 c_nu_min = parameter_scaling(P_LO, C_SC, None, DP,t='C')
 c_nu_max = parameter_scaling(P_HI, C_SC, None, DP,t='C')
 plt.show()
 print(f'v = {0.5*(c_nu_min + c_nu_max)} ± {abs(0.5*(c_nu_min - c_nu_max))}')
+
+
+P_VALS = np.linspace(0.01,0.99,50)
+P_SC_V = []
+P_INF = []
+NO=4
+
+P_SC_RF = P_SC(P_VALS,NO)
+
+for p in P_VALS:
+    c = get_node_param(NO,p)
+    P_INF.append(c[0])
+    P_SC_V.append(c[1])
+
+plt.plot(P_VALS,np.log(P_INF) , label=f'log O Pm. n={NO}')
+plt.legend()
+plt.grid()
+plt.savefig('order_log.png')
+plt.close()
+
+
+plt.plot(P_VALS,P_INF, label=f'Order Pm. n={NO}')
+plt.plot(P_VALS,P_SC_V, label='Sponge Cr.')
+plt.plot(P_VALS,P_SC_RF, label='Real S Cr.')
+
+plt.legend()
+
+plt.grid()
+
+plt.savefig('opsc.png')
+plt.close()
