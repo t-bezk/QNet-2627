@@ -23,13 +23,16 @@ def e_evte(a,b,c,f):## Implement divide by zero check
     return (b*c + (a*b-a*c)*f-f**2)/(1-f**2)
 
 def a_evte_inv(d,e,f): ## Implement divide by zero check
-    return ((d*e+f-d*e*f)*(e*f+d-d*e*f)/(d*f+e-d*e*f))**0.5
+    x_bc = (d*f+e-d*e*f)
+    return ((d*e+f-d*e*f)*(e*f+d-d*e*f)/x_bc)**0.5 if x_bc > 0 else 0.
 
 def b_evte_inv(d,e,f):## Implement divide by zero check
-    return ((d*e+f-d*e*f)*(d*f+e-d*e*f)/(e*f+d-d*e*f))**0.5
+    x_ab = e*f+d-d*e*f
+    return ((d*e+f-d*e*f)*(d*f+e-d*e*f)/x_ab)**0.5 if x_ab > 0 else 0.
 
 def c_evte_inv(d,e,f):## Implement divide by zero check
-    return ((e*f+d-d*e*f)*(d*f+e-d*e*f)/(d*e+f-d*e*f))**0.5
+    x_ac = d*e+f-d*e*f
+    return ((e*f+d-d*e*f)*(d*f+e-d*e*f)/x_ac)**0.5 if x_ac > 0 else 0.
 
 
 def star_3_fwd(a,b,c):

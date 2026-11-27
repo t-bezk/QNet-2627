@@ -6,7 +6,7 @@ def route_matrix(n, i):
 
     if n < 2:
         raise ValueError("n must be >= 2")
-    if not 0 <= i < 2 ** (n - 1):
+    if not -1 <= i < 2 ** (n - 1):
         raise IndexError(f"i must satisfy 0 <= i < {2 ** (n - 1)}")
 
     N = n + 2
@@ -61,7 +61,7 @@ def get_weighted_route(n, i, p):
     p = np.asarray(p, dtype=float)
     if len(p) < n - 1:
         raise ValueError(f"need at least n-1 = {n-1} weights in p")
-    if not 1 <= i <= 2 ** (n - 3):
+    if not 0 <= i <= 2 ** (n - 3):
         raise IndexError(f"i must satisfy 1 <= i <= {2 ** (n - 3)}")
 
     A = np.triu(route_matrix(n - 2, i - 1), 1)
@@ -104,7 +104,7 @@ def eliminate_penultimate(W, E):
 
     R, F = W.copy(), E.copy()
     for (u, v), w in (((s, L), f), ((s, o), d), ((o, L), e)):
-        R[u, v] = R[v, u] = pm.para(W[u, v], w) if E[u, v] else w
+        R[u, v] = R[v, u] = pm.para_c(W[u, v], w) if E[u, v] else w
         F[u, v] = F[v, u] = True
 
     keep = [j for j in range(m) if j != x]
